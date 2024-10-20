@@ -49,16 +49,13 @@ func (ms *msServer) broadcastHandler(msg maelstrom.Message) error {
 	ms.mu.Unlock()
 
 	for _, node := range ms.msNode.NodeIDs() {
-		if node == ms.msNode.ID() || node == msg.Src {
-			continue
+		if node != ms.msNode.ID() {
+			go func(node string) {
+				if err := ms.msNode.Send(node, body); err != nil {
+					panic(err)
+				}
+			}(node)
 		}
-
-		node := node
-		go func() {
-			if err := ms.msNode.Send(node, body); err != nil {
-				panic(err)
-			}
-		}()
 	}
 
 	return ms.msNode.Reply(msg, map[string]any{"type": "broadcast_ok"})
